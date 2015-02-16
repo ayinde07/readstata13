@@ -38,8 +38,8 @@ save.dta13(dat, file="newfile.dta")
 
 ### Working features
 
-* reading data files from disk or url and create a data.frame
-* saving dta files to disk - most features of the dta file format are supported
+* reading data files from disk or url and create a data.frame (supported versions are 8, 10, 12 and 13)
+* saving dta files to disk - most features of the dta file format are supported (supported version is 13)
 * assign variable names
 * read the new strL strings and save them as attribute
 * convert stata label to factors and save them as attribute

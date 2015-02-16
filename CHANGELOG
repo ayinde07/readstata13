@@ -1,3 +1,6 @@
+pre13
+- read dta-files of Stata version 8, 10 and 12
+
 0.5
 - write dta-files
 - read/write LSF and MSF files
