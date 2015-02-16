@@ -26,7 +26,7 @@
 #' @param encoding \emph{character.} Strings can be converted from Windows-1252 to system encoding.
 #'  Options are "latin1" or "utf-8" to specify target encoding explicitly.
 #' @param convert.underscore \emph{logical.} If \code{TRUE}, "_" in variable names will be changed to "."
-#' @param missing.type \emph{logical.} Stata knows 27 different missing types: ., .a, .b, ..., .z. 
+#' @param missing.type \emph{logical.} Stata knows 27 different missing types: ., .a, .b, ..., .z.
 #' If \code{TRUE}, attribute \code{missing} will be created.
 #' @param replace.strl \emph{logical.} If \code{TRUE}, replace the reference to a strL string in the data.frame with the actual value. The strl attribute will be removed from the data.frame.
 #' @param convert.dates \emph{logical.} If \code{TRUE}, Stata dates are converted.
@@ -35,7 +35,7 @@
 #'
 #' @details If the filename is a url, the file will be downloaded as a temporary file and read afterwards.
 #'
-#' Stata files are encoded in ansinew. Depending on your system default encoding certain characters may appear wrong.  
+#' Stata files are encoded in ansinew. Depending on your system default encoding certain characters may appear wrong.
 #' Using a correct encoding may fix these.
 #'
 #' Variable names stored in the dta-file will be used in the resulting data.frame. Stata types char, byte,
@@ -104,18 +104,22 @@ read.dta13 <- function(file, convert.factors = TRUE, generate.factors=FALSE,
   types <- attr(data, "types")
   val.labels <- attr(data, "val.labels")
   label <- attr(data, "label.table")
+  version <- attr(data, "version")
 
-  if (missing.type) {
-    stata.na <- data.frame(type = 65526L:65530L,
+  if(missing.type)
+  {
+    stata.na <- data.frame(type08 = 255L:251L,
+                           type13 = 65526L:65530L,
                            min = c(101, 32741, 2147483621, 2 ^ 127, 2 ^ 1023),
                            inc = c(1, 1, 1, 2 ^ 115, 2 ^ 1011)
     )
 
-    if (attr(data, "version") >= 117L) {
-      missings <- vector("list", length(data))
-      names(missings) <- names(data)
-      for (v in which(types > 65525L)) {
-        this.type <- 65531L - types[v]
+    missings <- vector("list", length(data))
+    names(missings) <- names(data)
+
+    if (version >= 117L) {
+      for(v in which(types > 65525L)) {
+        this.type <- 65531L-types[v]
         nas <- is.na(data[[v]]) |  data[[v]] >= stata.na$min[this.type]
         natype <- (data[[v]][nas] - stata.na$min[this.type]) /
           stata.na$inc[this.type]
@@ -124,9 +128,21 @@ read.dta13 <- function(file, convert.factors = TRUE, generate.factors=FALSE,
         missings[[v]][nas] <- natype
         data[[v]][nas] <- NA
       }
-      attr(data, "missing") <- missings
-    } else
-      warning("'missing.type' only applicable to version >= 13 files")
+    } else {
+      if (version >=113L & version <= 115L) {
+        for (v in which(types > 250L)) {
+          this.type <- types[v] - 250L
+          nas <- is.na(data[[v]]) | data[[v]] >= stata.na$min[this.type]
+          natype <- (data[[v]][nas] - stata.na$min[this.type]) /
+            stata.na$inc[this.type]
+          natype[is.na(natype)] <- 0L
+          missings[[v]] <- rep(NA, NROW(data))
+          missings[[v]][nas] <- natype
+          data[[v]][nas] <- NA
+        }
+      } else warning("'missing.type' only applicable to version >= 8 files")
+    }
+    attr(data,"missing") <- missings
   }
 
   var.labels <- attr(data, "var.labels")
@@ -169,34 +185,40 @@ read.dta13 <- function(file, convert.factors = TRUE, generate.factors=FALSE,
       attr(data, "expansion.fields") <- efi
     }
 
-    #strl
-    strl <- attr(data, "strl")
-    if (length(strl) > 0) {
-      for (i in 1:length(strl))  {
-        strl[[i]] <- read.encoding(strl[[i]], encoding)
+    if (version == 117L) {
+      #strl
+      strl <- attr(data, "strl")
+      if (length(strl) > 0) {
+        for (i in 1:length(strl))  {
+          strl[[i]] <- read.encoding(strl[[i]], encoding)
+        }
+        attr(data, "strl") <- strl
       }
-      attr(data, "strl") <- strl
     }
   }
 
   if (replace.strl) {
-    strl <- do.call(rbind, attr(data,"strl"))
-    for (j in seq(ncol(data))[types == 32768] ) {
-      refs <- unique(data[, j])
-      for (ref in refs) {
-        if (length(strl[strl[,1] == ref,2]) != 0){
-          data[data[, j] == ref, j] <- strl[strl[, 1] == ref, 2]
+    if (version == 117L) {
+      strl <- do.call(rbind, attr(data,"strl"))
+      for (j in seq(ncol(data))[types == 32768] ) {
+        refs <- unique(data[, j])
+        for (ref in refs) {
+          if (length(strl[strl[,1] == ref,2]) != 0){
+            data[data[, j] == ref, j] <- strl[strl[, 1] == ref, 2]
+          }
         }
       }
-    }
 
-    # recode strL 0 to void
-    for (v in (1:ncol(data))[types == 32768]) {
-      data[[v]] <- gsub("00000000000000000000","", data[[v]] )
-    }
+      # recode strL 0 to void
+      for (v in (1:ncol(data))[types == 32768]) {
+        data[[v]] <- gsub("00000000000000000000","", data[[v]] )
+      }
 
-    # if strls are in data.frame remove attribute strl
-    attr(data, "strl") <- NULL
+      # if strls are in data.frame remove attribute strl
+      attr(data, "strl") <- NULL
+    } else {
+      warning("Dta-file does not support strL.")
+    }
   }
 
 
@@ -221,7 +243,7 @@ read.dta13 <- function(file, convert.factors = TRUE, generate.factors=FALSE,
     ##  still have them. Format *%d*... is equivalent to modern
     ##  format *%td*... and *%-d*... is equivalent to *%-td*...'
 
-    dates <- if (attr(data, "version") == 117L) grep("^%(-|)(d|td)", ff)
+    dates <- if (attr(data, "version") >= 113L) grep('^%(-|)(d|td)', ff)
     else grep("%-*d", ff)
     ## avoid as.Date in case strptime is messed up
     base <- structure(-3653L, class = "Date") # Stata dates are integer vars
@@ -234,11 +256,23 @@ read.dta13 <- function(file, convert.factors = TRUE, generate.factors=FALSE,
   if (convert.factors) {
     vnames <- names(data)
     for (i in seq_along(val.labels)) {
-      labname <- val.labels[i]
-      vartype <- types[i]
+      labname  <- val.labels[i]
+      vartype  <- types[i]
       labtable <- label[[labname]]
+
+      version <- attr(data, "version")
+
+      # Integertypes changed in 117
+      if ( version==117L ) {
+        integervartype <- vartype>65527
+      } else { # Jetzt nicht so wild, aber ist das schneller, weil das nur aufgerufen wird, wenn das erste if nicht zutrift?
+        if ( version >=113 & version<=115L ) {
+          integervartype <- vartype>=251 & vartype<=253
+        }
+      }
+
       #don't convert columns of type double or float to factor
-      if (labname %in% names(label) & vartype >= 65527) {
+      if (labname %in% names(label)) {
         # get unique values / omit NA
         varunique <- na.omit(unique(data[, i]))
         # assign label if label set is complete
