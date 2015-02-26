@@ -26,12 +26,12 @@ using namespace Rcpp;
 using namespace std;
 
 
-//' Reads the binary Stata file
-//'
-//' @param filePath The full systempath to the dta file you want to import.
-//' @param missing logical if missings should be converted outside of Rcpp.
-//' @import Rcpp
-//' @export
+// Reads the binary Stata file
+//
+// @param filePath The full systempath to the dta file you want to import.
+// @param missing logical if missings should be converted outside of Rcpp.
+// @import Rcpp
+// @export
 // [[Rcpp::export]]
 List stata(const char * filePath, const bool missing)
 {
