@@ -92,6 +92,8 @@ List stata(const char * filePath, const bool missing)
     fseek(file, 10, SEEK_CUR); // </release>
     test("<byteorder>", file);
   } else {
+    if (stataversion<113 | stataversion>115)
+      throw std::range_error("File appears to be of unsupported Stata format.");
     versionIV(0) = stataversion;
   }
 
