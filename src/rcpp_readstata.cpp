@@ -92,7 +92,7 @@ List stata(const char * filePath, const bool missing)
     fseek(file, 10, SEEK_CUR); // </release>
     test("<byteorder>", file);
   } else {
-    if (stataversion<113 | stataversion>115)
+    if (stataversion<105 | stataversion>115)
       throw std::range_error("File appears to be of unsupported Stata format.");
     versionIV(0) = stataversion;
   }
@@ -121,13 +121,7 @@ List stata(const char * filePath, const bool missing)
     break;
   }
 
-  case 105:
-  case 108:
-  case 110:
-  case 111:
-  case 113:
-  case 114:
-  case 115:
+  default:
   {
     int8_t byteorder = 0;
     byteorder = readbin(byteorder, file, 0);
@@ -227,6 +221,7 @@ List stata(const char * filePath, const bool missing)
     break;
   }
 
+  case 108:
   case 110:
   case 111:
   case 113:
@@ -240,7 +235,6 @@ List stata(const char * filePath, const bool missing)
   }
 
   case 105:
-  case 108:
   {
     char datalabel[33];
     readstr(datalabel, file, 33);
@@ -282,9 +276,7 @@ List stata(const char * filePath, const bool missing)
 
   timestampCV(0) = timestamp;
 
-  switch (stataversion)
-  {
-  case 117:
+  if (stataversion==117)
   {
     fseek(file, 21, SEEK_CUR); //</timestamp></header>
     test("<map>", file);
@@ -318,8 +310,6 @@ List stata(const char * filePath, const bool missing)
 
     fseek(file, 6, SEEK_CUR); //</map>
     test("<variable_types>", file);
-    break;
-  }
   }
 
   /*
@@ -389,8 +379,6 @@ List stata(const char * filePath, const bool missing)
     break;
   }
 
-    // FixMe: This is stupid. I should use a class here or a function, but I
-    // should not duplicate this function :(
   case 117:
   {
     uint16_t nvartype = 0;
