@@ -25,15 +25,7 @@
 using namespace Rcpp;
 using namespace std;
 
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-#define lsf "LSF"
-#define byteorder "LSF"
-#else
-#define lsf "MSF"
-#define byteorder "MSF"
-#endif
-
-bool swapit = strcmp(byteorder, lsf);
+bool swapit = 0;
 
 template <typename T>
 static void writebin(T t, fstream& dta, bool swapit)
@@ -137,7 +129,7 @@ int stataWrite(const char * filePath, Rcpp::DataFrame dat)
     dta.write(head.c_str(),head.size());
     dta.write(version,3); // for now 117 (e.g. Stata 13)
     dta.write(byteord.c_str(),byteord.size());
-    dta.write(byteorder,3); // LSF
+    dta.write(sbyteorder,3); // LSF
     dta.write(K.c_str(),K.size());
     writebin(k, dta, swapit);
     dta.write(num.c_str(),num.size());

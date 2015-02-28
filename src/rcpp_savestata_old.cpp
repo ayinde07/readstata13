@@ -52,7 +52,7 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
 
   uint16_t k = dat.size();
   uint32_t n = dat.nrows();
-  int8_t byteorder = 2;
+  int8_t byteorder = SBYTEORDER;
 
   string timestamp = dat.attr("timestamp");
   timestamp.resize(18);
