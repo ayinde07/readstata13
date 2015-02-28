@@ -85,6 +85,11 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
     writebin(n, dta, swapit);
 
     /* write a datalabel */
+    if (version>105 & datalabel.size()>82)
+      datalabel.resize(82);
+    if (version==105 & datalabel.size()>32)
+      datalabel.resize(32);
+
     dta.write(datalabel.c_str(),datalabel.size());
 
 
@@ -96,15 +101,52 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
     for (uint16_t i = 0; i < k; ++i)
     {
       nvartype = as<uint8_t>(vartypes[i]);
+      if(version<111)
+      {
+        char c[2];
 
-      writebin(nvartype, dta, swapit);
+        switch(nvartype)
+        {
+        case 255:
+          strcpy(c,"d");
+          dta.write(c, 1);
+          break;
+        case 254:
+          strcpy(c,"f");
+          dta.write(c, 1);
+          break;
+        case 253:
+          strcpy(c,"l");
+          dta.write(c, 1);
+          break;
+        case 252:
+          strcpy(c,"i");
+          dta.write(c, 1);
+          break;
+        case 251:
+          strcpy(c,"b");
+          dta.write(c, 1);
+          break;
+        default:
+          char d = char(nvartype+127);
+        dta.write(&d, 1);
+        break;
+        }
+      }
+      else
+        writebin(nvartype, dta, swapit);
     }
 
     /* <varnames> ... </varnames> */
     for (uint16_t i = 0; i < k; ++i )
     {
-      const string nvarname = as<string>(nvarnames[i]);
-      dta.write(nvarname.c_str(),33);
+      string nvarname = as<string>(nvarnames[i]);
+      if (version>108)
+        nvarname.resize(32);
+      else
+        nvarname.resize(8);
+
+      dta.write(nvarname.c_str(),nvarname.size()+1);
     }
 
     /* <sortlist> ... </sortlist> */
@@ -119,18 +161,25 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
     /* <formats> ... </formats> */
     for (uint16_t i = 0; i < k; ++i )
     {
-      const string nformats = as<string>(formats[i]);
-      if(version!=113)
-        dta.write(nformats.c_str(),49);
+      string nformats = as<string>(formats[i]);
+      if (version>113)
+        nformats.resize(49);
       else
-        dta.write(nformats.c_str(),12);
+        nformats.resize(12);
+
+      dta.write(nformats.c_str(),nformats.size());
     }
 
     /* <value_label_names> ... </value_label_names> */
     for (uint16_t i = 0; i < k; ++i )
     {
-      const string nvalLabels = as<string>(valLabels[i]);
-      dta.write(nvalLabels.c_str(),33);
+      string nvalLabels = as<string>(valLabels[i]);
+      if (version>108)
+        nvalLabels.resize(32);
+      else
+        nvalLabels.resize(8);
+
+      dta.write(nvalLabels.c_str(),nvalLabels.size()+1);
     }
 
     /* <variable_labels> ... </variable_labels> */
@@ -138,10 +187,16 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
     {
       if (!Rf_isNull(varLabels) && Rf_length(varLabels) > 1) {
         const string nvarLabels = as<std::string>(varLabels[i]);
-        dta.write(nvarLabels.c_str(),81);
+        if (version>105)
+          dta.write(nvarLabels.c_str(),81);
+        else
+          dta.write(nvarLabels.c_str(),32);
       } else {
         const string nvarLabels = "";
-        dta.write(nvarLabels.c_str(),81);
+        if (version>105)
+          dta.write(nvarLabels.c_str(),81);
+        else
+          dta.write(nvarLabels.c_str(),32);
       }
     }
 
@@ -150,6 +205,7 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
 
     int8_t datatype = 0;
     uint32_t len = 0;
+
     if (chs.size()>0){
       for (int32_t i = 0; i<chs.size(); ++i){
 
@@ -166,7 +222,10 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
         datatype = 1;
 
         writebin(datatype, dta, swapit);
-        writebin(len, dta, swapit);
+        if(version<=108)
+          writebin((int16_t)len, dta, swapit);
+        else
+          writebin(len, dta, swapit);
 
         dta.write(ch1.c_str(),33);
         dta.write(ch2.c_str(),33);
@@ -179,7 +238,10 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
     datatype = 0;
     len = 0;
     writebin(datatype, dta, swapit);
-    writebin(len, dta, swapit);
+    if (version<=108)
+      writebin((int16_t)len, dta, swapit);
+    else
+      writebin(len, dta, swapit);
 
     /* <data> ... </data> */
 
@@ -221,7 +283,12 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
           int32_t val_l = as<IntegerVector>(dat[i])[j];
 
           if ( (val_l == NA_INTEGER) | (R_IsNA(val_l)) )
-            val_l = STATA_INT_NA;
+          {
+            if(version>111)
+              val_l = STATA_INT_NA;
+            else
+              val_l = STATA_INT_NA_108;
+          }
 
           writebin(val_l, dta, swapit);
 
@@ -267,10 +334,16 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
         }
         default:
         {
-          int32_t const len = vartypes[i];
+          int32_t len = vartypes[i];
           /* FixMe: Storing the vector in b for each string. */
           CharacterVector b = as<CharacterVector>(dat[i]);
           string val_s = as<string>(b[j]);
+          // Stata 6-12 can only store 244 byte strings
+          if(val_s.size()>244)
+          {
+            val_s.resize(244);
+            len = 244;
+          }
           dta.write(val_s.c_str(),len);
           break;
         }
@@ -281,7 +354,7 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
 
 
     /* <value_labels> ... </value_labels> */
-    if (labeltable.size()>0)
+    if (labeltable.size()>0 & version>105)
     {
 
       CharacterVector labnames = labeltable.attr("names");
@@ -291,7 +364,7 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
       {
         int32_t txtlen = 0;
 
-        const string labname = as<string>(labnames[i]);
+        string labname = as<string>(labnames[i]);
         IntegerVector labvalue = labeltable[labname];
         int32_t N = labvalue.size();
         CharacterVector labelText = labvalue.attr("names");
@@ -314,7 +387,13 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
         int32_t nlen = sizeof(N) + sizeof(txtlen) + sizeof(offI)*N + sizeof(labvalueI)*N + txtlen;
 
         writebin(nlen, dta, swapit);
-        dta.write(labname.c_str(),33);
+
+        if (version>108)
+          labname.resize(32);
+        else
+          labname.resize(8);
+
+        dta.write(labname.c_str(),labname.size()+1);
         dta.write((char*)&padding,3);
         writebin(N, dta, swapit);
         writebin(txtlen, dta, swapit);

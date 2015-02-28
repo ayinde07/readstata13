@@ -59,8 +59,16 @@ save.dtaOld <- function(data, file="path", data.label=NULL, time.stamp=TRUE,
     version <- 114
   if (version==9|version==8)
     version <- 113
+  if (version=="7SE")
+    version <- 111
+  if (version==7)
+    version <- 110
+  if (version==6)
+    version <- 108
+  if (version==5)
+    version <- 105
 
-  if (version<115 & version>113)
+  if (version<105 & version>113)
     stop("Version missmatch abort execution. No Data was saved.")
 
   attr(data, "version") <- version

@@ -16,7 +16,7 @@
  */
 
 #include <Rcpp.h>
-#include "string"
+#include <string.h>
 #include <stdint.h>
 #include "statadefines.h"
 #include "swap_endian.h"
@@ -121,6 +121,10 @@ List stata(const char * filePath, const bool missing)
     break;
   }
 
+  case 105:
+  case 108:
+  case 110:
+  case 111:
   case 113:
   case 114:
   case 115:
@@ -140,7 +144,6 @@ List stata(const char * filePath, const bool missing)
     break;
   }
   }
-
 
   /*
   * Number of Variables
@@ -195,6 +198,9 @@ List stata(const char * filePath, const bool missing)
   * datalabel: string max length 80
   */
 
+  //   if (stataversion==stataversion)
+  //     throw std::range_error("Debug");
+
   uint8_t ndlabel = 0;
   CharacterVector datalabelCV(1);
 
@@ -220,12 +226,24 @@ List stata(const char * filePath, const bool missing)
     test("<timestamp>", file);
     break;
   }
+
+  case 110:
+  case 111:
   case 113:
   case 114:
   case 115:
   {
     char datalabel[82];
     readstr(datalabel, file, 82);
+    datalabelCV(0) = datalabel;
+    break;
+  }
+
+  case 105:
+  case 108:
+  {
+    char datalabel[33];
+    readstr(datalabel, file, 33);
     datalabelCV(0) = datalabel;
     break;
   }
@@ -254,9 +272,8 @@ List stata(const char * filePath, const bool missing)
     }
     break;
   }
-  case 113:
-  case 114:
-  case 115:
+
+  default:
   {
     readstr(timestamp, file, 19);
     break;
@@ -321,19 +338,43 @@ List stata(const char * filePath, const bool missing)
   switch (stataversion)
   {
 
-    // FixMe: This is stupid. I should use a class here or a function, but I
-    // should not duplicate this function :(
-  case 117:
+  case 105:
+  case 108:
+  case 110:
   {
-    uint16_t nvartype = 0;
+    char nvartypec [1];
+
     for (uint16_t i=0; i<k; ++i)
     {
-      nvartype = readbin(nvartype, file, swapit);
-      vartype[i] = nvartype;
+      readstr(nvartypec, file, 1+1);
+
+      switch(nvartypec[0])
+      {
+      case 'd':
+        vartype[i] = 255;
+        break;
+      case 'f':
+        vartype[i] = 254;
+        break;
+      case 'l':
+        vartype[i] = 253;
+        break;
+      case 'i':
+        vartype[i] = 252;
+        break;
+      case 'b':
+        vartype[i] = 251;
+        break;
+      default:
+        // 127 is Statas offset
+        vartype[i] = *reinterpret_cast<int16_t*>(nvartypec) -127;
+      break;
+      }
     }
     break;
   }
 
+  case 111:
   case 113:
   case 114:
   case 115:
@@ -347,7 +388,21 @@ List stata(const char * filePath, const bool missing)
     }
     break;
   }
+
+    // FixMe: This is stupid. I should use a class here or a function, but I
+    // should not duplicate this function :(
+  case 117:
+  {
+    uint16_t nvartype = 0;
+    for (uint16_t i=0; i<k; ++i)
+    {
+      nvartype = readbin(nvartype, file, swapit);
+      vartype[i] = nvartype;
+    }
+    break;
   }
+  }
+
 
   // FixMe: Needs clone otherwise missing.type would not work
   IntegerVector types = clone(vartype);
@@ -363,11 +418,30 @@ List stata(const char * filePath, const bool missing)
   */
 
   CharacterVector varnames(k);
-  for (uint16_t i=0; i<k; ++i)
+  switch(stataversion)
+  {
+  case 105:
+  case 108:
+  {
+    for (uint16_t i=0; i<k; ++i)
+  {
+    char nvarnames [9];
+    readstr(nvarnames, file, sizeof(nvarnames)+1);
+    varnames[i] = nvarnames;
+  }
+    break;
+  }
+
+  default:
+  {
+    for (uint16_t i=0; i<k; ++i)
   {
     char nvarnames [33];
     readstr(nvarnames, file, sizeof(nvarnames)+1);
     varnames[i] = nvarnames;
+  }
+    break;
+  }
   }
 
   if (stataversion==117)
@@ -408,6 +482,10 @@ List stata(const char * filePath, const bool missing)
   switch (stataversion)
   {
 
+  case 105:
+  case 108:
+  case 110:
+  case 111:
   case 113:
   {
     for (uint16_t i=0; i<k; ++i)
@@ -445,11 +523,31 @@ List stata(const char * filePath, const bool missing)
   */
 
   CharacterVector valLabels(k);
-  for (uint16_t i=0; i<k; ++i)
+  switch(stataversion)
+  {
+
+  case 105:
+  case 108:
+  {
+    for (uint16_t i=0; i<k; ++i)
+  {
+    char nvalLabels[9];
+    readstr(nvalLabels, file, sizeof(nvalLabels)+1);
+    valLabels[i] = nvalLabels;
+  }
+    break;
+  }
+
+  default:
+  {
+    for (uint16_t i=0; i<k; ++i)
   {
     char nvalLabels[33];
     readstr(nvalLabels, file, sizeof(nvalLabels)+1);
     valLabels[i] = nvalLabels;
+  }
+    break;
+  }
   }
 
   if (stataversion==117)
@@ -462,11 +560,23 @@ List stata(const char * filePath, const bool missing)
   */
 
   CharacterVector varLabels(k);
-  for (uint16_t i=0; i<k; ++i)
+  if (stataversion==105)
   {
-    char nvarLabels[81];
-    readstr(nvarLabels, file, sizeof(nvarLabels)+1);
-    varLabels[i] = nvarLabels;
+    for (uint16_t i=0; i<k; ++i)
+    {
+      char nvarLabels[32];
+      readstr(nvarLabels, file, sizeof(nvarLabels)+1);
+      varLabels[i] = nvarLabels;
+    }
+  }
+  else
+  {
+    for (uint16_t i=0; i<k; ++i)
+    {
+      char nvarLabels[81];
+      readstr(nvarLabels, file, sizeof(nvarLabels)+1);
+      varLabels[i] = nvarLabels;
+    }
   }
 
   List ch = List();
@@ -532,6 +642,43 @@ List stata(const char * filePath, const bool missing)
     break;
   }
 
+  case 105:
+  case 108:
+  {
+    int8_t datatype = 0;
+    uint16_t len = 0;
+
+    datatype = readbin(datatype, file, swapit);
+    len = readbin(len, file, swapit);
+
+    while (!(datatype==0) && !(len==0))
+    {
+
+      char chvarname[33];
+      char chcharact[33];
+      char *contents = new char[len-65]; // we need more memory here
+
+      readstr(chvarname, file, 33+1); // variable name
+      readstr(chcharact, file, 33+1); // characteristic name
+      readstr(contents, file, len-66+1);
+
+      CharacterVector chs(3);
+      chs[0] = chvarname;
+      chs[1] = chcharact;
+      chs[2] = contents;
+
+      delete[] contents;
+
+      ch.push_back(chs);
+
+      datatype = readbin(datatype, file, swapit);
+      len = readbin(len, file, swapit);
+    }
+    break;
+  }
+
+  case 110:
+  case 111:
   case 113:
   case 114:
   case 115:
@@ -638,6 +785,7 @@ List stata(const char * filePath, const bool missing)
       {
         float val_f = 0;
         val_f = readbin(val_f, file, swapit);
+
         if ((missing == FALSE) & ((val_f<STATA_FLOAT_NA_MIN) | (val_f>STATA_FLOAT_NA_MAX)) )
           REAL(VECTOR_ELT(df,i))[j] = NA_REAL;
         else
@@ -886,6 +1034,93 @@ List stata(const char * filePath, const bool missing)
     break;
   }
 
+    // case 105:
+  case 108:
+  {
+
+    int32_t nlen = 0, labn = 0, txtlen = 0, noff = 0, val = 0;
+
+    // length of value_label_table
+    nlen = readbin(nlen, file, swapit);
+
+    while(!feof(file)||ferror(file))
+    {
+      // name of this label set
+      char nlabname[9];
+      readstr(nlabname, file, sizeof(nlabname)+1);
+
+      //padding
+      fseek(file, 3, SEEK_CUR);
+
+      // value_label_table for actual label set
+      labn = readbin(labn, file, swapit);
+
+      txtlen = readbin(txtlen, file, swapit);
+
+      // offset for each label
+      // off0 : label 0 starts at off0
+      // off1 : label 1 starts at off1 ...
+      IntegerVector off(labn);
+      for (int i=0; i < labn; ++i) {
+        noff = readbin(noff, file, swapit);
+        off[i] = noff;
+      }
+
+      // needed for match
+      IntegerVector laborder = clone(off);
+      //laborder.erase(labn+1);
+      IntegerVector labordersort = clone(off);
+      //labordersort.erase(labn+1);
+      std::sort(labordersort.begin(), labordersort.end());
+
+      // needs txtlen for loop
+      off.push_back(txtlen);
+
+      // sort offsets so we can read labels sequentially
+      std::sort(off.begin(), off.end());
+
+      // create an index to sort lables along the code values
+      // this is done while factor creation
+      IntegerVector indx(labn);
+      indx = match(laborder,labordersort);
+
+      // code for each label
+      IntegerVector code(labn);
+      for (int i=0; i < labn; ++i) {
+        val = readbin(val, file, swapit);
+        code[i] = val;
+      }
+
+      // label text
+      CharacterVector label(labn);
+      for (int i=0; i < labn; ++i) {
+        int const lablen = off[i+1]-off[i];
+        char *lab = new char[lablen+1]; //add + 1
+        readstr(lab, file, lablen+1);
+        label[i] = lab;
+        delete[] lab;
+      }
+
+      // sort labels according to indx
+      CharacterVector labelo(labn);
+      for (int i=0; i < labn; ++i) {
+        labelo[i] = label[indx[i]-1];
+      }
+      // create table for actual label set
+      string const labset = nlabname;
+      code.attr("names") = labelo;
+
+      // add this set to output list
+      labelList.push_front( code, labset);
+
+      // EOF reached?
+      nlen = readbin(nlen, file, swapit);
+    }
+    break;
+  }
+
+  case 110:
+  case 111:
   case 113:
   case 114:
   case 115:
@@ -976,9 +1211,9 @@ List stata(const char * filePath, const bool missing)
   if (stataversion==117)
   {
     /*
-     * Final test if we reached the end of the file
-     * close the file
-     */
+    * Final test if we reached the end of the file
+    * close the file
+    */
 
 
     fseek(file, 10, SEEK_CUR); // [</val]ue_labels>
