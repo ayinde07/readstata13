@@ -43,7 +43,7 @@ List stata(const char * filePath, const bool missing)
   */
 
   if ((file = fopen(filePath, "rb")) == NULL)
-    throw std::range_error("Could not open specified file.");
+    Rcpp::stop("Could not open specified file.");
 
   /*
   * check the first byte. continue if "<"
@@ -64,7 +64,7 @@ List stata(const char * filePath, const bool missing)
     stataversion = readbin(stataversion, file, 0);
 
     if (stataversion==117)
-      throw std::range_error("First byte: Not a file we can read.");
+      Rcpp::stop("First byte: Not a file we can read.");
   }
 
   char version [4];
@@ -87,19 +87,20 @@ List stata(const char * filePath, const bool missing)
 
     // check the release version. continue if "117"
     if (gversion!=atoi(version))
-      throw std::range_error("Version: Not a version 13 dta-file.");
+      Rcpp::stop("Version: Not a version 13 dta-file.");
 
     fseek(file, 10, SEEK_CUR); // </release>
     test("<byteorder>", file);
   } else {
-    if (stataversion<105 | stataversion>115)
-      throw std::range_error("File appears to be of unsupported Stata format.");
+    if (stataversion<102 | stataversion>115)
+      Rcpp::stop("File appears to be of unsupported Stata format.");
     versionIV(0) = stataversion;
   }
 
   /*
   * byteorder is a 4 byte character e.g. "LSF". MSF referes to big-memory data.
   */
+
 
   bool swapit;
 
@@ -147,19 +148,15 @@ List stata(const char * filePath, const bool missing)
   switch (stataversion)
   {
 
-  default:
-  {
-    k = readbin(k, file, swapit);
-    break;
-  }
-
   case 117:
-  {
     k = readbin(k, file, swapit);
     fseek(file, 4, SEEK_CUR); //</K>
     test("<N>", file);
     break;
-  }
+
+  default:
+    k = readbin(k, file, swapit);
+  break;
   }
 
   /*
@@ -171,20 +168,17 @@ List stata(const char * filePath, const bool missing)
   switch (stataversion)
   {
 
-  default:
-  {
-    n = readbin(n, file, swapit);
-    break;
-  }
-
   case 117:
-  {
     n = readbin(n, file, swapit);
     fseek(file, 4, SEEK_CUR); //</N>
     test("<label>", file);
     break;
+
+  default:
+    n = readbin(n, file, swapit);
+  break;
   }
-  }
+
   /*
   * A dataset may have a label e.g. "Written by R".
   * First we read its length (ndlabel), later the actual label (datalabel).
@@ -201,23 +195,21 @@ List stata(const char * filePath, const bool missing)
 
   switch (stataversion)
   {
-  case 117:
+
+  case 102:
   {
-    ndlabel = readbin(ndlabel, file, swapit);
-    // FixMe: 117 ndlabel max length is 80. Use 113/115 default char length?
-    char *datalabel = new char[ndlabel];
-    if (ndlabel>0)
-    {
-      readstr(datalabel, file, ndlabel+1);
-    } else {
-      datalabel[0] = '\0';
-    }
-
+    char datalabel[31];
+    readstr(datalabel, file, 31);
     datalabelCV(0) = datalabel;
-    delete[] datalabel;
+    break;
+  }
 
-    fseek(file, 8, SEEK_CUR); //</label>
-    test("<timestamp>", file);
+  case 104:
+  case 105:
+  {
+    char datalabel[33];
+    readstr(datalabel, file, 33);
+    datalabelCV(0) = datalabel;
     break;
   }
 
@@ -234,11 +226,23 @@ List stata(const char * filePath, const bool missing)
     break;
   }
 
-  case 105:
+  case 117:
   {
-    char datalabel[33];
-    readstr(datalabel, file, 33);
+    ndlabel = readbin(ndlabel, file, swapit);
+    // FixMe: 117 ndlabel max length is 80. Use 113/115 default char length?
+    char *datalabel = new char[ndlabel+1];
+    if (ndlabel>0)
+    {
+      readstr(datalabel, file, ndlabel+1);
+    } else {
+      datalabel[0] = '\0';
+    }
+
     datalabelCV(0) = datalabel;
+    delete[] datalabel;
+
+    fseek(file, 8, SEEK_CUR); //</label>
+    test("<timestamp>", file);
     break;
   }
   }
@@ -247,31 +251,37 @@ List stata(const char * filePath, const bool missing)
   char timestamp[18];
   switch (stataversion)
   {
-  case 117:
-  {
-    /*
-    * A dataset may have a timestamp. If it has a timestamp the length of the
-    * timestamp (ntimestamp) is 17. Else it is zero.
-    * ntimestamp: 0 or 17
-    * timestamp: empty or 17 byte string
-    */
-    uint8_t ntimestamp = 0;
-    ntimestamp = readbin(ntimestamp, file, swapit);
 
-    if (ntimestamp == 17) // ntimestap is 0 or 17
-    {
-      readstr(timestamp, file, ntimestamp+1);
-    } else {
-      timestamp[0] = '\0';
-    }
+  case 102:
+  case 104:
+    timestamp[0] = '\0';
     break;
-  }
+
+  case 117:
+    {
+      /*
+      * A dataset may have a timestamp. If it has a timestamp the length of the
+      * timestamp (ntimestamp) is 17. Else it is zero.
+      * ntimestamp: 0 or 17
+      * timestamp: empty or 17 byte string
+      */
+      uint8_t ntimestamp = 0;
+      ntimestamp = readbin(ntimestamp, file, swapit);
+
+      if (ntimestamp == 17) // ntimestap is 0 or 17
+      {
+        readstr(timestamp, file, ntimestamp+1);
+      } else {
+        timestamp[0] = '\0';
+      }
+      break;
+    }
 
   default:
-  {
-    readstr(timestamp, file, 19);
-    break;
-  }
+    {
+      readstr(timestamp, file, 19);
+      break;
+    }
   }
 
   timestampCV(0) = timestamp;
@@ -328,6 +338,8 @@ List stata(const char * filePath, const bool missing)
   switch (stataversion)
   {
 
+  case 102:
+  case 104:
   case 105:
   case 108:
   case 110:
@@ -408,6 +420,8 @@ List stata(const char * filePath, const bool missing)
   CharacterVector varnames(k);
   switch(stataversion)
   {
+  case 102:
+  case 104:
   case 105:
   case 108:
   {
@@ -470,6 +484,17 @@ List stata(const char * filePath, const bool missing)
   switch (stataversion)
   {
 
+  case 102:
+  case 104:
+  {
+    for (uint16_t i=0; i<k; ++i)
+  {
+    char nformats[7];
+    readstr(nformats, file, sizeof(nformats)+1);
+    formats[i] = nformats;
+  }
+    break;
+  }
   case 105:
   case 108:
   case 110:
@@ -514,6 +539,8 @@ List stata(const char * filePath, const bool missing)
   switch(stataversion)
   {
 
+  case 102:
+  case 104:
   case 105:
   case 108:
   {
@@ -548,7 +575,7 @@ List stata(const char * filePath, const bool missing)
   */
 
   CharacterVector varLabels(k);
-  if (stataversion==105)
+  if (stataversion<=105)
   {
     for (uint16_t i=0; i<k; ++i)
     {
@@ -570,65 +597,6 @@ List stata(const char * filePath, const bool missing)
   List ch = List();
   switch (stataversion)
   {
-  case 117:
-  {
-    fseek(file, 18, SEEK_CUR); //</variable_labels>
-    test("<characteristics>", file);
-    /*
-    * characteristics. Stata can store additional information this way. It may
-    * contain notes (for the dataset or a variable) or about label language sets.
-    * Characteristics are not documented. We export them as attribute:
-    * expansion.fields. Characteristics are seperated by <ch> tags. Each <ch> has:
-    * nocharacter:  length of the characteristics
-    * chvarname:    varname (binary 0 terminated)
-    * chcharact:    characteristicsname (binary 0 terminated)
-    * nnocharacter: contes (binary 0 terminated)
-    */
-
-    char chtag[5] = "<ch>";
-    chtag[4] = '\0';
-
-    CharacterVector chs(3);
-
-    char tago[5];
-    readstr(tago, file, sizeof(tago));
-
-    while (strcmp(tago,chtag)==0)
-    {
-      uint32_t nocharacter = 0;
-      nocharacter = readbin(nocharacter, file, swapit);
-
-      char chvarname[33];
-      char chcharact[33];
-      char *nnocharacter = new char[nocharacter-65]; // we need more memory here
-
-      readstr(chvarname, file, sizeof(chvarname)+1);
-      readstr(chcharact, file, sizeof(chcharact)+1);
-      readstr(nnocharacter, file, nocharacter-66+1);
-
-      // chs vector
-      CharacterVector chs(3);
-      chs[0] = chvarname;
-      chs[1] = chcharact;
-      chs[2] = nnocharacter;
-
-      delete[] nnocharacter;
-
-      // add characteristics to the list
-      ch.push_front( chs );
-
-      //fseek(file, 5, SEEK_CUR); // </ch>
-      test("</ch>", file);
-
-      // read next tag
-      readstr(tago, file, sizeof(tago));
-    }
-
-    fseek(file, 14, SEEK_CUR); //[</ch]aracteristics>
-    test("<data>", file);
-
-    break;
-  }
 
   case 105:
   case 108:
@@ -702,6 +670,67 @@ List stata(const char * filePath, const bool missing)
     }
     break;
   }
+
+  case 117:
+  {
+    fseek(file, 18, SEEK_CUR); //</variable_labels>
+    test("<characteristics>", file);
+    /*
+    * characteristics. Stata can store additional information this way. It may
+    * contain notes (for the dataset or a variable) or about label language sets.
+    * Characteristics are not documented. We export them as attribute:
+    * expansion.fields. Characteristics are seperated by <ch> tags. Each <ch> has:
+    * nocharacter:  length of the characteristics
+    * chvarname:    varname (binary 0 terminated)
+    * chcharact:    characteristicsname (binary 0 terminated)
+    * nnocharacter: contes (binary 0 terminated)
+    */
+
+    char chtag[5] = "<ch>";
+    chtag[4] = '\0';
+
+    CharacterVector chs(3);
+
+    char tago[5];
+    readstr(tago, file, sizeof(tago));
+
+    while (strcmp(tago,chtag)==0)
+    {
+      uint32_t nocharacter = 0;
+      nocharacter = readbin(nocharacter, file, swapit);
+
+      char chvarname[33];
+      char chcharact[33];
+      char *nnocharacter = new char[nocharacter-65]; // we need more memory here
+
+      readstr(chvarname, file, sizeof(chvarname)+1);
+      readstr(chcharact, file, sizeof(chcharact)+1);
+      readstr(nnocharacter, file, nocharacter-66+1);
+
+      // chs vector
+      CharacterVector chs(3);
+      chs[0] = chvarname;
+      chs[1] = chcharact;
+      chs[2] = nnocharacter;
+
+      delete[] nnocharacter;
+
+      // add characteristics to the list
+      ch.push_front( chs );
+
+      //fseek(file, 5, SEEK_CUR); // </ch>
+      test("</ch>", file);
+
+      // read next tag
+      readstr(tago, file, sizeof(tago));
+    }
+
+    fseek(file, 14, SEEK_CUR); //[</ch]aracteristics>
+    test("<data>", file);
+
+    break;
+  }
+
   }
 
 
@@ -929,98 +958,9 @@ List stata(const char * filePath, const bool missing)
 
   List labelList = List(); //put labels into this list
 
-
   // FixMe: the while statement differs and the final check
   switch (stataversion)
   {
-  case 117:
-  {
-    char tag[6];
-    readstr(tag, file, sizeof(tag));
-
-    char lbltag[6] = "<lbl>";
-    lbltag[5] = '\0';
-
-    while(strcmp(lbltag,tag)==0)
-    {
-      int32_t nlen = 0, labn = 0, txtlen = 0, noff = 0, val = 0;
-
-      // length of value_label_table
-      nlen = readbin(nlen, file, swapit);
-
-      // name of this label set
-      char nlabname[33];
-      readstr(nlabname, file, sizeof(nlabname)+1);
-
-      //padding
-      fseek(file, 3, SEEK_CUR);
-
-      // value_label_table for actual label set
-      labn = readbin(labn, file, swapit);
-      txtlen = readbin(txtlen, file, swapit);
-
-      // offset for each label
-      // off0 : label 0 starts at off0
-      // off1 : label 1 starts at off1 ...
-      IntegerVector off(labn);
-      for (int i=0; i < labn; ++i) {
-        noff = readbin(noff, file, swapit);
-        off[i] = noff;
-      }
-
-      // needed for match
-      IntegerVector laborder = clone(off);
-      //laborder.erase(labn+1);
-      IntegerVector labordersort = clone(off);
-      //labordersort.erase(labn+1);
-      std::sort(labordersort.begin(), labordersort.end());
-
-      // needs txtlen for loop
-      off.push_back(txtlen);
-
-      // sort offsets so we can read labels sequentially
-      std::sort(off.begin(), off.end());
-
-      // create an index to sort lables along the code values
-      // this is done while factor creation
-      IntegerVector indx(labn);
-      indx = match(laborder,labordersort);
-
-      // code for each label
-      IntegerVector code(labn);
-      for (int i=0; i < labn; ++i) {
-        val = readbin(val, file, swapit);
-        code[i] = val;
-      }
-
-      // label text
-      CharacterVector label(labn);
-      for (int i=0; i < labn; ++i) {
-        int const lablen = off[i+1]-off[i];
-        char *lab = new char[lablen+1]; //add + 1
-        readstr(lab, file, lablen+1);
-        label[i] = lab;
-        delete[] lab;
-      }
-
-      // sort labels according to indx
-      CharacterVector labelo(labn);
-      for (int i=0; i < labn; ++i) {
-        labelo[i] = label[indx[i]-1];
-      }
-      // create table for actual label set
-      string const labset = nlabname;
-      code.attr("names") = labelo;
-
-      // add this set to output list
-      labelList.push_front( code, labset);
-
-      fseek(file, 6, SEEK_CUR); //</lbl>
-
-      readstr(tag, file, sizeof(tag));
-    }
-    break;
-  }
 
     // case 105:
   case 108:
@@ -1194,6 +1134,96 @@ List stata(const char * filePath, const bool missing)
     }
     break;
   }
+
+  case 117:
+  {
+    char tag[6];
+    readstr(tag, file, sizeof(tag));
+
+    char lbltag[6] = "<lbl>";
+    lbltag[5] = '\0';
+
+    while(strcmp(lbltag,tag)==0)
+    {
+      int32_t nlen = 0, labn = 0, txtlen = 0, noff = 0, val = 0;
+
+      // length of value_label_table
+      nlen = readbin(nlen, file, swapit);
+
+      // name of this label set
+      char nlabname[33];
+      readstr(nlabname, file, sizeof(nlabname)+1);
+
+      //padding
+      fseek(file, 3, SEEK_CUR);
+
+      // value_label_table for actual label set
+      labn = readbin(labn, file, swapit);
+      txtlen = readbin(txtlen, file, swapit);
+
+      // offset for each label
+      // off0 : label 0 starts at off0
+      // off1 : label 1 starts at off1 ...
+      IntegerVector off(labn);
+      for (int i=0; i < labn; ++i) {
+        noff = readbin(noff, file, swapit);
+        off[i] = noff;
+      }
+
+      // needed for match
+      IntegerVector laborder = clone(off);
+      //laborder.erase(labn+1);
+      IntegerVector labordersort = clone(off);
+      //labordersort.erase(labn+1);
+      std::sort(labordersort.begin(), labordersort.end());
+
+      // needs txtlen for loop
+      off.push_back(txtlen);
+
+      // sort offsets so we can read labels sequentially
+      std::sort(off.begin(), off.end());
+
+      // create an index to sort lables along the code values
+      // this is done while factor creation
+      IntegerVector indx(labn);
+      indx = match(laborder,labordersort);
+
+      // code for each label
+      IntegerVector code(labn);
+      for (int i=0; i < labn; ++i) {
+        val = readbin(val, file, swapit);
+        code[i] = val;
+      }
+
+      // label text
+      CharacterVector label(labn);
+      for (int i=0; i < labn; ++i) {
+        int const lablen = off[i+1]-off[i];
+        char *lab = new char[lablen+1]; //add + 1
+        readstr(lab, file, lablen+1);
+        label[i] = lab;
+        delete[] lab;
+      }
+
+      // sort labels according to indx
+      CharacterVector labelo(labn);
+      for (int i=0; i < labn; ++i) {
+        labelo[i] = label[indx[i]-1];
+      }
+      // create table for actual label set
+      string const labset = nlabname;
+      code.attr("names") = labelo;
+
+      // add this set to output list
+      labelList.push_front( code, labset);
+
+      fseek(file, 6, SEEK_CUR); //</lbl>
+
+      readstr(tag, file, sizeof(tag));
+    }
+    break;
+  }
+
   }
 
   if (stataversion==117)
