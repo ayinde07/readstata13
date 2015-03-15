@@ -84,6 +84,20 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
 
     switch(version)
     {
+    case 102:
+      maxdatalabelsize = 30;
+      formatsize = 7;
+      varnamesize = 8;
+      vallabelsize = 8;
+      varlabelsize = 32;
+      break;
+    case 104:
+      maxdatalabelsize = 32;
+      formatsize = 7;
+      varnamesize = 8;
+      vallabelsize = 8;
+      varlabelsize = 32;
+      break;
     case 105:
       maxdatalabelsize = 32;
       formatsize = 12;
@@ -121,9 +135,9 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
 
     dta.write(datalabel.c_str(),datalabel.size());
 
-
     /* timestamp size is 17 */
-    dta.write(timestamp.c_str(),timestamp.size());
+    if (version > 104)
+      dta.write(timestamp.c_str(),timestamp.size());
 
     /* <variable_types> ... </variable_types> */
     uint8_t  nvartype;
@@ -221,45 +235,48 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
 
     /* <characteristics> ... </characteristics> */
 
-    int8_t datatype = 0;
-    uint32_t len = 0;
+    if (version > 104)
+    {
+      int8_t datatype = 0;
+      uint32_t len = 0;
 
-    if (chs.size()>0){
-      for (int32_t i = 0; i<chs.size(); ++i){
+      if (chs.size()>0){
+        for (int32_t i = 0; i<chs.size(); ++i){
 
-        CharacterVector ch = as<CharacterVector>(chs[i]);
+          CharacterVector ch = as<CharacterVector>(chs[i]);
 
-        string ch1 = as<string>(ch[0]);
-        ch1[ch1.size()] = '\0';
-        string ch2 = as<string>(ch[1]);
-        ch2[ch2.size()] = '\0';
-        string ch3 = as<string>(ch[2]);
-        ch3[ch3.size()] = '\0';
+          string ch1 = as<string>(ch[0]);
+          ch1[ch1.size()] = '\0';
+          string ch2 = as<string>(ch[1]);
+          ch2[ch2.size()] = '\0';
+          string ch3 = as<string>(ch[2]);
+          ch3[ch3.size()] = '\0';
 
-        len = 33 + 33 + ch3.size()+1;
-        datatype = 1;
+          len = 33 + 33 + ch3.size()+1;
+          datatype = 1;
 
-        writebin(datatype, dta, swapit);
-        if(version<=108)
-          writebin((int16_t)len, dta, swapit);
-        else
-          writebin(len, dta, swapit);
+          writebin(datatype, dta, swapit);
+          if(version<=108)
+            writebin((int16_t)len, dta, swapit);
+          else
+            writebin(len, dta, swapit);
 
-        dta.write(ch1.c_str(),33);
-        dta.write(ch2.c_str(),33);
-        dta.write(ch3.c_str(),ch3.size()+1);
+          dta.write(ch1.c_str(),33);
+          dta.write(ch2.c_str(),33);
+          dta.write(ch3.c_str(),ch3.size()+1);
 
+        }
       }
-    }
 
-    // five bytes of zero end characteristics
-    datatype = 0;
-    len = 0;
-    writebin(datatype, dta, swapit);
-    if (version<=108)
-      writebin((int16_t)len, dta, swapit);
-    else
-      writebin(len, dta, swapit);
+      // five bytes of zero end characteristics
+      datatype = 0;
+      len = 0;
+      writebin(datatype, dta, swapit);
+      if (version<=108)
+        writebin((int16_t)len, dta, swapit);
+      else
+        writebin(len, dta, swapit);
+    }
 
     /* <data> ... </data> */
 
@@ -343,8 +360,12 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
 
           int8_t val_b = val.b;
 
-          if (val.l == NA_INTEGER)
-            val_b = STATA_BYTE_NA;
+          if (val.l == NA_INTEGER) {
+            if (version>104)
+              val_b = STATA_BYTE_NA;
+            else
+              val_b = STATA_BYTE_NA_104;
+          }
 
           writebin(val_b, dta, swapit);
 
@@ -442,7 +463,7 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
     return 0;
   }
   else {
-    throw std::range_error("Unable to open file.");
+    Rcpp::stop("Unable to open file.");
     return -1;
   }
 }

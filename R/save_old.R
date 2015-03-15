@@ -67,8 +67,12 @@ save.dtaOld <- function(data, file="path", data.label=NULL, time.stamp=TRUE,
     version <- 108
   if (version==5)
     version <- 105
+  if (version==4)
+    version <- 104
+  if (version==3)
+    version <- 102
 
-  if (version<105 & version>113)
+  if (version<104 & version>113)
     stop("Version missmatch abort execution. No Data was saved.")
 
   attr(data, "version") <- version
@@ -223,6 +227,7 @@ save.dtaOld <- function(data, file="path", data.label=NULL, time.stamp=TRUE,
   if (!time.stamp) {
     attr(data, "timestamp") <- ""
   } else {
+    Sys.setlocale("LC_TIME", "C")
     attr(data, "timestamp") <- format(Sys.time(), "%d %b %Y %H:%M")
   }
 
