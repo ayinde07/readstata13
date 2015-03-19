@@ -70,6 +70,8 @@ save.dtaOld <- function(data, file="path", data.label=NULL, time.stamp=TRUE,
   if (version==4)
     version <- 104
   if (version==3)
+    version <- 103
+  if (version==2)
     version <- 102
 
   if (version<102 & version>113)

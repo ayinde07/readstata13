@@ -204,6 +204,7 @@ List stata(const char * filePath, const bool missing)
     break;
   }
 
+  case 103:
   case 104:
   case 105:
   {
@@ -253,6 +254,7 @@ List stata(const char * filePath, const bool missing)
   {
 
   case 102:
+  case 103:
   case 104:
     timestamp[0] = '\0';
     break;
@@ -339,6 +341,7 @@ List stata(const char * filePath, const bool missing)
   {
 
   case 102:
+  case 103:
   case 104:
   case 105:
   case 108:
@@ -421,6 +424,7 @@ List stata(const char * filePath, const bool missing)
   switch(stataversion)
   {
   case 102:
+  case 103:
   case 104:
   case 105:
   case 108:
@@ -485,6 +489,7 @@ List stata(const char * filePath, const bool missing)
   {
 
   case 102:
+  case 103:
   case 104:
   {
     for (uint16_t i=0; i<k; ++i)
@@ -540,6 +545,7 @@ List stata(const char * filePath, const bool missing)
   {
 
   case 102:
+  case 103:
   case 104:
   case 105:
   case 108:

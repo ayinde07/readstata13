@@ -91,6 +91,7 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
       vallabelsize = 8;
       varlabelsize = 32;
       break;
+    case 103:
     case 104:
       maxdatalabelsize = 32;
       formatsize = 7;
