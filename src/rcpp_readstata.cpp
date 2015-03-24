@@ -82,17 +82,19 @@ List stata(const char * filePath, const bool missing)
     int8_t gversion = 117L; //g = good
 
     readstr(version, file, sizeof(version));
+    int8_t sv = atoi(version);
+    printf("%d", sv);
 
     versionIV(0) = atoi(version);
 
     // check the release version. continue if "117"
-    if (gversion!=atoi(version))
+    if ( !(gversion==stataversion || 116==stataversion) )
       Rcpp::stop("Version: Not a version 13 dta-file.");
 
     fseek(file, 10, SEEK_CUR); // </release>
     test("<byteorder>", file);
-  } else {
-    if (stataversion<102 | stataversion>115)
+  } else
+    if (stataversion<102)
       Rcpp::stop("File appears to be of unsupported Stata format.");
     versionIV(0) = stataversion;
   }
@@ -101,7 +103,6 @@ List stata(const char * filePath, const bool missing)
   * byteorder is a 4 byte character e.g. "LSF". MSF referes to big-memory data.
   */
 
-
   bool swapit;
 
   CharacterVector byteorderC(1);
@@ -109,6 +110,7 @@ List stata(const char * filePath, const bool missing)
 
   switch (stataversion)
   {
+  case 116:
   case 117:
   {
     char byteorder [4];
@@ -148,6 +150,7 @@ List stata(const char * filePath, const bool missing)
   switch (stataversion)
   {
 
+  case 116:
   case 117:
     k = readbin(k, file, swapit);
     fseek(file, 4, SEEK_CUR); //</K>
@@ -168,6 +171,7 @@ List stata(const char * filePath, const bool missing)
   switch (stataversion)
   {
 
+  case 116:
   case 117:
     n = readbin(n, file, swapit);
     fseek(file, 4, SEEK_CUR); //</N>
@@ -226,6 +230,7 @@ List stata(const char * filePath, const bool missing)
     break;
   }
 
+  case 116:
   case 117:
   {
     ndlabel = readbin(ndlabel, file, swapit);
@@ -258,6 +263,7 @@ List stata(const char * filePath, const bool missing)
     timestamp[0] = '\0';
     break;
 
+  case 116:
   case 117:
     {
       /*
@@ -321,7 +327,10 @@ List stata(const char * filePath, const bool missing)
     }
 
     fseek(file, 6, SEEK_CUR); //</map>
+  } else {
+    if (stataversion==117 || stataversion==116) {
     test("<variable_types>", file);
+    }
   }
 
   /*
@@ -383,6 +392,7 @@ List stata(const char * filePath, const bool missing)
   case 113:
   case 114:
   case 115:
+  case 116:
   {
     uint8_t nvartype = 0;
 
@@ -410,7 +420,7 @@ List stata(const char * filePath, const bool missing)
   // FixMe: Needs clone otherwise missing.type would not work
   IntegerVector types = clone(vartype);
 
-  if (stataversion==117)
+  if (stataversion==117 || stataversion==116)
   {
     fseek(file, 17, SEEK_CUR); //</variable_types>
     test("<varnames>", file);
@@ -450,7 +460,7 @@ List stata(const char * filePath, const bool missing)
   }
   }
 
-  if (stataversion==117)
+  if (stataversion==117 || stataversion ==116)
   {
     fseek(file, 11, SEEK_CUR); //</varnames>
     test("<sortlist>", file);
@@ -517,6 +527,7 @@ List stata(const char * filePath, const bool missing)
 
   case 114:
   case 115:
+  case 116:
   case 117:
   {
     for (uint16_t i=0; i<k; ++i)
@@ -529,7 +540,7 @@ List stata(const char * filePath, const bool missing)
     break;
   }
 
-  if (stataversion==117)
+  if (stataversion==117 || stataversion==116)
   {
     fseek(file, 10, SEEK_CUR); //</formats>
     test("<value_label_names>",file);
@@ -571,7 +582,7 @@ List stata(const char * filePath, const bool missing)
   }
   }
 
-  if (stataversion==117)
+  if (stataversion==117 || stataversion==116)
   {
     fseek(file, 20, SEEK_CUR); //</value_label_names>
     test("<variable_labels>", file);
@@ -677,6 +688,7 @@ List stata(const char * filePath, const bool missing)
     break;
   }
 
+  case 116:
   case 117:
   {
     fseek(file, 18, SEEK_CUR); //</variable_labels>
@@ -1144,6 +1156,7 @@ List stata(const char * filePath, const bool missing)
     break;
   }
 
+  case 116:
   case 117:
   {
     char tag[6];
@@ -1235,7 +1248,7 @@ List stata(const char * filePath, const bool missing)
 
   }
 
-  if (stataversion==117)
+  if (stataversion==117 || stataversion==116)
   {
     /*
     * Final test if we reached the end of the file
