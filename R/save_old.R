@@ -77,14 +77,14 @@ save.dtaOld <- function(data, file="path", data.label=NULL, time.stamp=TRUE,
   if (version<102 & version>113)
     stop("Version missmatch abort execution. No Data was saved.")
 
-  attr(data, "version") <- version
-
   if (!is.data.frame(data))
     message("Object is not of class data.frame.")
 
   if (add.rownames)
     data <- data.frame(rownames= save.encoding(rownames(data)),
                        data, stringsAsFactors = F)
+
+  attr(data, "version") <- version
 
   filepath <- path.expand(file)
 
