@@ -79,8 +79,6 @@ List stata(const char * filePath, const bool missing)
      * release is a 4 byte character e.g. "117"
      */
 
-    int8_t gversion = 117L; //g = good
-
     readstr(version, file, sizeof(version));
 
     versionIV(0) = atoi(version);
