@@ -100,12 +100,14 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
       varlabelsize = 32;
       break;
     case 105:
+    case 106:// unknown version (SE?)
       maxdatalabelsize = 32;
       formatsize = 12;
       varnamesize = 8;
       vallabelsize = 8;
       varlabelsize = 32;
       break;
+    case 107: // unknown version (SE?)
     case 108:
       formatsize = 12;
       varnamesize = 8;
@@ -114,6 +116,7 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
       formatsize = 12;
       break;
     case 111:
+    case 112:
       formatsize = 12;
       break;
     case 113:
@@ -145,29 +148,29 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
     for (uint16_t i = 0; i < k; ++i)
     {
       nvartype = as<uint8_t>(vartypes[i]);
-      if(version<111)
+      if(version<111 || version==112)
       {
         char c[2];
 
         switch(nvartype)
         {
         case 255:
-          strcpy(c,"d");
+          strcpy(c, "d");
           c[1] = '\0';
           dta.write(c, 1);
           break;
         case 254:
-          strcpy(c,"f");
+          strcpy(c, "f");
           c[1] = '\0';
           dta.write(c, 1);
           break;
         case 253:
-          strcpy(c,"l");
+          strcpy(c, "l");
           c[1] = '\0';
           dta.write(c, 1);
           break;
         case 252:
-          strcpy(c,"i");
+          strcpy(c, "i");
           c[1] = '\0';
           dta.write(c, 1);
           break;
