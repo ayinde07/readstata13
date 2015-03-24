@@ -431,8 +431,8 @@ List stata(const char * filePath, const bool missing)
   {
     for (uint16_t i=0; i<k; ++i)
   {
-    char nvarnames [9];
-    readstr(nvarnames, file, sizeof(nvarnames)+1);
+    char nvarnames [10];
+    readstr(nvarnames, file, sizeof(nvarnames));
     varnames[i] = nvarnames;
   }
     break;
@@ -442,8 +442,8 @@ List stata(const char * filePath, const bool missing)
   {
     for (uint16_t i=0; i<k; ++i)
   {
-    char nvarnames [33];
-    readstr(nvarnames, file, sizeof(nvarnames)+1);
+    char nvarnames [34];
+    readstr(nvarnames, file, sizeof(nvarnames));
     varnames[i] = nvarnames;
   }
     break;
@@ -494,8 +494,8 @@ List stata(const char * filePath, const bool missing)
   {
     for (uint16_t i=0; i<k; ++i)
   {
-    char nformats[7];
-    readstr(nformats, file, sizeof(nformats)+1);
+    char nformats[8];
+    readstr(nformats, file, sizeof(nformats));
     formats[i] = nformats;
   }
     break;
@@ -508,8 +508,8 @@ List stata(const char * filePath, const bool missing)
   {
     for (uint16_t i=0; i<k; ++i)
   {
-    char nformats[12];
-    readstr(nformats, file, sizeof(nformats)+1);
+    char nformats[13];
+    readstr(nformats, file, sizeof(nformats));
     formats[i] = nformats;
   }
     break;
@@ -521,8 +521,8 @@ List stata(const char * filePath, const bool missing)
   {
     for (uint16_t i=0; i<k; ++i)
   {
-    char nformats[49];
-    readstr(nformats, file, sizeof(nformats)+1);
+    char nformats[50];
+    readstr(nformats, file, sizeof(nformats));
     formats[i] = nformats;
   }
   }
@@ -552,8 +552,8 @@ List stata(const char * filePath, const bool missing)
   {
     for (uint16_t i=0; i<k; ++i)
   {
-    char nvalLabels[9];
-    readstr(nvalLabels, file, sizeof(nvalLabels)+1);
+    char nvalLabels[10];
+    readstr(nvalLabels, file, sizeof(nvalLabels));
     valLabels[i] = nvalLabels;
   }
     break;
@@ -563,8 +563,8 @@ List stata(const char * filePath, const bool missing)
   {
     for (uint16_t i=0; i<k; ++i)
   {
-    char nvalLabels[33];
-    readstr(nvalLabels, file, sizeof(nvalLabels)+1);
+    char nvalLabels[34];
+    readstr(nvalLabels, file, sizeof(nvalLabels));
     valLabels[i] = nvalLabels;
   }
     break;
@@ -585,8 +585,8 @@ List stata(const char * filePath, const bool missing)
   {
     for (uint16_t i=0; i<k; ++i)
     {
-      char nvarLabels[32];
-      readstr(nvarLabels, file, sizeof(nvarLabels)+1);
+      char nvarLabels[33];
+      readstr(nvarLabels, file, sizeof(nvarLabels));
       varLabels[i] = nvarLabels;
     }
   }
@@ -594,8 +594,8 @@ List stata(const char * filePath, const bool missing)
   {
     for (uint16_t i=0; i<k; ++i)
     {
-      char nvarLabels[81];
-      readstr(nvarLabels, file, sizeof(nvarLabels)+1);
+      char nvarLabels[82];
+      readstr(nvarLabels, file, sizeof(nvarLabels));
       varLabels[i] = nvarLabels;
     }
   }
@@ -616,12 +616,12 @@ List stata(const char * filePath, const bool missing)
     while (!(datatype==0) && !(len==0))
     {
 
-      char chvarname[33];
-      char chcharact[33];
+      char chvarname[34];
+      char chcharact[34];
       char *contents = new char[len-65]; // we need more memory here
 
-      readstr(chvarname, file, 33+1); // variable name
-      readstr(chcharact, file, 33+1); // characteristic name
+      readstr(chvarname, file, sizeof(chvarname));
+      readstr(chcharact, file, sizeof(chcharact));
       readstr(contents, file, len-66+1);
 
       CharacterVector chs(3);
@@ -654,12 +654,12 @@ List stata(const char * filePath, const bool missing)
     while (!(datatype==0) && !(len==0))
     {
 
-      char chvarname[33];
-      char chcharact[33];
+      char chvarname[34];
+      char chcharact[34];
       char *contents = new char[len-65]; // we need more memory here
 
-      readstr(chvarname, file, 33+1); // variable name
-      readstr(chcharact, file, 33+1); // characteristic name
+      readstr(chvarname, file, sizeof(chvarname));
+      readstr(chcharact, file, sizeof(chcharact));
       readstr(contents, file, len-66+1);
 
       CharacterVector chs(3);
@@ -705,12 +705,12 @@ List stata(const char * filePath, const bool missing)
       uint32_t nocharacter = 0;
       nocharacter = readbin(nocharacter, file, swapit);
 
-      char chvarname[33];
-      char chcharact[33];
+      char chvarname[34];
+      char chcharact[34];
       char *nnocharacter = new char[nocharacter-65]; // we need more memory here
 
-      readstr(chvarname, file, sizeof(chvarname)+1);
-      readstr(chcharact, file, sizeof(chcharact)+1);
+      readstr(chvarname, file, sizeof(chvarname));
+      readstr(chcharact, file, sizeof(chcharact));
       readstr(nnocharacter, file, nocharacter-66+1);
 
       // chs vector
@@ -983,8 +983,8 @@ List stata(const char * filePath, const bool missing)
     while(!feof(file)||ferror(file))
     {
       // name of this label set
-      char nlabname[9];
-      readstr(nlabname, file, sizeof(nlabname)+1);
+      char nlabname[10];
+      readstr(nlabname, file, sizeof(nlabname));
 
       //padding
       fseek(file, 3, SEEK_CUR);
@@ -1071,8 +1071,8 @@ List stata(const char * filePath, const bool missing)
     while(!feof(file)||ferror(file))
     {
       // name of this label set
-      char nlabname[33];
-      readstr(nlabname, file, sizeof(nlabname)+1);
+      char nlabname[34];
+      readstr(nlabname, file, sizeof(nlabname));
 
       //padding
       fseek(file, 3, SEEK_CUR);
@@ -1160,8 +1160,8 @@ List stata(const char * filePath, const bool missing)
       nlen = readbin(nlen, file, swapit);
 
       // name of this label set
-      char nlabname[33];
-      readstr(nlabname, file, sizeof(nlabname)+1);
+      char nlabname[34];
+      readstr(nlabname, file, sizeof(nlabname));
 
       //padding
       fseek(file, 3, SEEK_CUR);
