@@ -46,8 +46,8 @@ List stata(const char * filePath, const bool missing)
     Rcpp::stop("Could not open specified file.");
 
   /*
-  * check the first byte. continue if "<"
-  */
+   * check the first byte. continue if "<"
+   */
 
   char fbit[2];
   readstr(fbit, file, sizeof(fbit));
@@ -76,24 +76,23 @@ List stata(const char * filePath, const bool missing)
     test("<release>", file);
 
     /*
-    * release is a 4 byte character e.g. "117"
-    */
+     * release is a 4 byte character e.g. "117"
+     */
 
     int8_t gversion = 117L; //g = good
 
     readstr(version, file, sizeof(version));
-    int8_t sv = atoi(version);
-    printf("%d", sv);
 
     versionIV(0) = atoi(version);
+    stataversion = (int8_t)atoi(version);
 
     // check the release version. continue if "117"
-    if ( !(gversion==stataversion || 116==stataversion) )
+    if (!(stataversion==117 || stataversion==116))
       Rcpp::stop("Version: Not a version 13 dta-file.");
 
     fseek(file, 10, SEEK_CUR); // </release>
     test("<byteorder>", file);
-  } else
+  } else {
     if (stataversion<102)
       Rcpp::stop("File appears to be of unsupported Stata format.");
     versionIV(0) = stataversion;
@@ -294,6 +293,11 @@ List stata(const char * filePath, const bool missing)
 
   timestampCV(0) = timestamp;
 
+  if (stataversion==116)
+  {
+    fseek(file, 21, SEEK_CUR); //</timestamp></header>
+    test("<variable_types>", file);
+  }
   if (stataversion==117)
   {
     fseek(file, 21, SEEK_CUR); //</timestamp></header>
@@ -327,10 +331,7 @@ List stata(const char * filePath, const bool missing)
     }
 
     fseek(file, 6, SEEK_CUR); //</map>
-  } else {
-    if (stataversion==117 || stataversion==116) {
     test("<variable_types>", file);
-    }
   }
 
   /*
@@ -392,7 +393,6 @@ List stata(const char * filePath, const bool missing)
   case 113:
   case 114:
   case 115:
-  case 116:
   {
     uint8_t nvartype = 0;
 
@@ -404,6 +404,7 @@ List stata(const char * filePath, const bool missing)
     break;
   }
 
+  case 116:
   case 117:
   {
     uint16_t nvartype = 0;
@@ -482,7 +483,7 @@ List stata(const char * filePath, const bool missing)
     sortlist[i] = nsortlist;
   }
 
-  if (stataversion==117)
+  if (stataversion==117 || stataversion==116)
   {
     fseek(file, 11, SEEK_CUR); //</sortlist>
     test("<formats>", file);
@@ -898,6 +899,12 @@ List stata(const char * filePath, const bool missing)
   df.attr("class") = "data.frame";
 
 
+  if (stataversion==116)
+  {
+    fseek(file, 7, SEEK_CUR); //</data>
+    test("<value_labels>", file);
+  }
+
   List strlstable = List(); //put strLs into this list
   if (stataversion==117)
   {
@@ -966,6 +973,7 @@ List stata(const char * filePath, const bool missing)
     fseek(file, 5, SEEK_CUR); //[</s]trls>
     test("<value_labels>", file);
   }
+
 
   /*
   * labels are seperated by <lbl>-tags. Labels may appear in any order e.g.
@@ -1248,12 +1256,23 @@ List stata(const char * filePath, const bool missing)
 
   }
 
-  if (stataversion==117 || stataversion==116)
+
+  /*
+   * Final test if we reached the end of the file
+   * close the file
+   */
+
+  // blobs
+  if (stataversion==116)
   {
-    /*
-    * Final test if we reached the end of the file
-    * close the file
-    */
+    fseek(file, 10, SEEK_CUR); // [</val]ue_labels>
+    test("<blobs>", file);
+    test("</blobs>", file);
+    test("</stata_dta>", file);
+  }
+
+  if (stataversion==117)
+  {
 
 
     fseek(file, 10, SEEK_CUR); // [</val]ue_labels>
