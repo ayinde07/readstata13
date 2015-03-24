@@ -206,6 +206,7 @@ List stata(const char * filePath, const bool missing)
   case 103:
   case 104:
   case 105:
+  case 106:
   {
     char datalabel[33];
     readstr(datalabel, file, 33);
@@ -213,9 +214,11 @@ List stata(const char * filePath, const bool missing)
     break;
   }
 
+  case 107:
   case 108:
   case 110:
   case 111:
+  case 112:
   case 113:
   case 114:
   case 115:
@@ -343,8 +346,11 @@ List stata(const char * filePath, const bool missing)
   case 103:
   case 104:
   case 105:
+  case 106:
+  case 107:
   case 108:
   case 110:
+  case 112:
   {
     char nvartypec [1];
 
@@ -426,6 +432,8 @@ List stata(const char * filePath, const bool missing)
   case 103:
   case 104:
   case 105:
+  case 106:
+  case 107:
   case 108:
   {
     for (uint16_t i=0; i<k; ++i)
@@ -500,9 +508,12 @@ List stata(const char * filePath, const bool missing)
     break;
   }
   case 105:
+  case 106:
+  case 107:
   case 108:
   case 110:
   case 111:
+  case 112:
   case 113:
   {
     for (uint16_t i=0; i<k; ++i)
@@ -547,6 +558,8 @@ List stata(const char * filePath, const bool missing)
   case 103:
   case 104:
   case 105:
+  case 106:
+  case 107:
   case 108:
   {
     for (uint16_t i=0; i<k; ++i)
@@ -580,7 +593,7 @@ List stata(const char * filePath, const bool missing)
   */
 
   CharacterVector varLabels(k);
-  if (stataversion<=105)
+  if (stataversion<=106)
   {
     for (uint16_t i=0; i<k; ++i)
     {
@@ -604,6 +617,8 @@ List stata(const char * filePath, const bool missing)
   {
 
   case 105:
+  case 106:
+  case 107:
   case 108:
   {
     int8_t datatype = 0;
@@ -640,6 +655,7 @@ List stata(const char * filePath, const bool missing)
 
   case 110:
   case 111:
+  case 112:
   case 113:
   case 114:
   case 115:
@@ -971,6 +987,8 @@ List stata(const char * filePath, const bool missing)
   {
 
     // case 105:
+  case 106:
+  case 107:
   case 108:
   {
 
@@ -1057,6 +1075,7 @@ List stata(const char * filePath, const bool missing)
 
   case 110:
   case 111:
+  case 112:
   case 113:
   case 114:
   case 115:
