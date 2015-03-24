@@ -269,7 +269,6 @@ List stata(const char * filePath, const bool missing)
       uint8_t ntimestamp = 0;
       ntimestamp = readbin(ntimestamp, file, swapit);
 
-      char *timestamp = new char[ntimestamp+1];
       if (ntimestamp == 17) // ntimestap is 0 or 17
       {
         readstr(timestamp, file, ntimestamp+1);
