@@ -49,7 +49,8 @@
 #' @export
 save.dtaOld <- function(data, file="path", data.label=NULL, time.stamp=TRUE,
                         convert.factors=FALSE, convert.dates=TRUE, tz="GMT",
-                        add.rownames=FALSE, compress=FALSE, version=115){
+                        add.rownames=FALSE, compress=FALSE, version=115,
+                        convert.underscore=FALSE){
   # Alow writing version as Stata version not Stata format
   if (version==13)
     stop("Please use save.dta13().")
@@ -87,6 +88,9 @@ save.dtaOld <- function(data, file="path", data.label=NULL, time.stamp=TRUE,
                        data, stringsAsFactors = F)
 
   attr(data, "version") <- version
+
+  if (convert.underscore)
+    names(data) <- gsub("[.]", "_", names(data))
 
   filepath <- path.expand(file)
 

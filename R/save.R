@@ -49,7 +49,7 @@
 #' @export
 save.dta13 <- function(data, file="path", data.label=NULL, time.stamp=TRUE,
                        convert.factors=FALSE, convert.dates=TRUE, tz="GMT",
-                       add.rownames=FALSE, compress=FALSE){
+                       add.rownames=FALSE, compress=FALSE, convert.underscore=FALSE){
 
   if (!is.data.frame(data))
     message("Object is not of class data.frame.")
@@ -57,6 +57,9 @@ save.dta13 <- function(data, file="path", data.label=NULL, time.stamp=TRUE,
   if (add.rownames)
     data <- data.frame(rownames= save.encoding(rownames(data)),
                        data, stringsAsFactors = F)
+
+  if (convert.underscore)
+    names(data) <- gsub("[.]", "_", names(data))
 
   filepath <- path.expand(file)
 
