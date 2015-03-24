@@ -192,7 +192,6 @@ List stata(const char * filePath, const bool missing)
   uint8_t ndlabel = 0;
   CharacterVector datalabelCV(1);
 
-
   switch (stataversion)
   {
 
@@ -270,6 +269,7 @@ List stata(const char * filePath, const bool missing)
       uint8_t ntimestamp = 0;
       ntimestamp = readbin(ntimestamp, file, swapit);
 
+      char *timestamp = new char[ntimestamp+1];
       if (ntimestamp == 17) // ntimestap is 0 or 17
       {
         readstr(timestamp, file, ntimestamp+1);
@@ -866,8 +866,11 @@ List stata(const char * filePath, const bool missing)
         // strings with 2045 or fewer characters
       default:
       {
-        char *val_s = new char[type];
-        readstr(val_s, file, type+1);
+        int32_t len = 0;
+        len = vartype[i];
+
+        char *val_s = new char[len+1];
+        readstr(val_s, file, len+1);
         as<CharacterVector>(df[i])[j] = val_s;
         delete[] val_s;
         break;

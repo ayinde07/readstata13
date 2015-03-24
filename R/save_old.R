@@ -229,8 +229,9 @@ save.dtaOld <- function(data, file="path", data.label=NULL, time.stamp=TRUE,
   if (!time.stamp) {
     attr(data, "timestamp") <- ""
   } else {
-    Sys.setlocale("LC_TIME", "C")
+    lct <- Sys.getlocale("LC_TIME"); Sys.setlocale("LC_TIME", "C")
     attr(data, "timestamp") <- format(Sys.time(), "%d %b %Y %H:%M")
+    Sys.setlocale("LC_TIME",lct)
   }
 
   expfield <- attr(data, "expansion.fields")

@@ -54,5 +54,4 @@
 
 #define STATA_STRL 32768
 
-
 #endif
