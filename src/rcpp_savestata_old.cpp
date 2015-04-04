@@ -135,13 +135,22 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
 
     /* write a datalabel */
     if (datalabel.size()>maxdatalabelsize)
+    {
+      Rcpp::warning("Datalabel to long. Resizing.");
       datalabel.resize(maxdatalabelsize);
-
+    }
     dta.write(datalabel.c_str(),datalabel.size());
 
     /* timestamp size is 17 */
     if (version > 104)
+    {
+      if (timestamp.size()>18)
+      {
+        Rcpp::warning("Timestamp to long. Droping.");
+        timestamp = "";
+      }
       dta.write(timestamp.c_str(),timestamp.size());
+    }
 
     /* <variable_types> ... </variable_types> */
     uint8_t  nvartype;
@@ -193,6 +202,9 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
     for (uint16_t i = 0; i < k; ++i )
     {
       string nvarname = as<string>(nvarnames[i]);
+      if (nvarname.size()>varnamesize)
+        Rcpp::warning("Varname to long. Resizing.");
+
       nvarname.resize(varnamesize);
 
       dta.write(nvarname.c_str(),nvarname.size()+1);
@@ -211,7 +223,11 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
     for (uint16_t i = 0; i < k; ++i )
     {
       string nformats = as<string>(formats[i]);
+      if (nformats.size()>formatsize)
+        Rcpp::warning("Formats to long. Resizing.");
+
       nformats.resize(formatsize);
+
 
       dta.write(nformats.c_str(),nformats.size());
     }
@@ -221,6 +237,11 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
     {
       string nvalLabels = as<string>(valLabels[i]);
       nvalLabels.resize(vallabelsize);
+
+      if (nvalLabels.size()>vallabelsize)
+      {
+        Rcpp::warning("Vallabel to long. Resizing.");
+      }
 
       dta.write(nvalLabels.c_str(),nvalLabels.size()+1);
     }
