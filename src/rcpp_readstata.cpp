@@ -69,7 +69,7 @@ List stata(const char * filePath, const bool missing)
   std::string version(3, '\0');
 
   IntegerVector versionIV(1);
-  if (release==117)
+  if (release>=117)
   {
     fseek(file, 18, SEEK_CUR);// stata_dta><header>
     test("<release>", file);
@@ -83,7 +83,10 @@ List stata(const char * filePath, const bool missing)
 
     readstring(version, file, version.size());
 
-    versionIV(0) = atoi(version.c_str());
+    release = atoi(version.c_str());
+    versionIV(0) = release;
+
+
 
     // check the release version.
     if (release<fversion || release>lversion)
@@ -98,6 +101,8 @@ List stata(const char * filePath, const bool missing)
       Rcpp::stop("File appears to be of unsupported Stata format.");
     versionIV(0) = release;
   }
+
+  printf("%d \n", release);
 
   /*
   * byteorder is a 4 byte character e.g. "LSF". MSF referes to big-memory data.
@@ -237,6 +242,7 @@ List stata(const char * filePath, const bool missing)
   switch (release)
   {
   case 117:
+  case 118:
   {
     std::string byteorder(3, '\0');
     readstring(byteorder,file, byteorder.size());
@@ -282,7 +288,7 @@ List stata(const char * filePath, const bool missing)
   * Number of Observations
   */
 
-  int64_t n = 0;
+  uint64_t n = 0;
 
   switch (release)
   {
@@ -292,7 +298,7 @@ List stata(const char * filePath, const bool missing)
 
   default:
     n = readbin((uint32_t)n, file, swapit);
-  break;
+    break;
   }
 
   if(release>=117) {

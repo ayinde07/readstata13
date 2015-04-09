@@ -1,4 +1,3 @@
-
 #
 # Copyright (C) 2014-2015 Jan Marvin Garbuszus and Sebastian Jeworutzki
 #
@@ -49,7 +48,7 @@
 #' @export
 save.dta13 <- function(data, file="path", data.label=NULL, time.stamp=TRUE,
                        convert.factors=FALSE, convert.dates=TRUE, tz="GMT",
-                       add.rownames=FALSE, compress=FALSE, convert.underscore=FALSE){
+                       add.rownames=FALSE, compress=FALSE, version=117){
 
   if (!is.data.frame(data))
     message("Object is not of class data.frame.")
@@ -57,9 +56,6 @@ save.dta13 <- function(data, file="path", data.label=NULL, time.stamp=TRUE,
   if (add.rownames)
     data <- data.frame(rownames= save.encoding(rownames(data)),
                        data, stringsAsFactors = F)
-
-  if (convert.underscore)
-    names(data) <- gsub("[.]", "_", names(data))
 
   filepath <- path.expand(file)
 
@@ -213,6 +209,8 @@ save.dta13 <- function(data, file="path", data.label=NULL, time.stamp=TRUE,
   expfield <- attr(data, "expansion.fields")
   expfield <- lapply(expfield, function(x) iconv(x, to="CP1252"))
   attr(data, "expansion.fields") <- rev(expfield)
+
+  attr(data, "version") <- as.character(version)
 
   invisible( stataWrite(filePath = filepath, dat = data) )
 }
