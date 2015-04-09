@@ -34,25 +34,21 @@ T readbin( T t , FILE * file, bool swapit)
     return(swap_endian(t));
 }
 
-static void readstr(char *var, FILE * fp, int nchar)
+static void readstring(std::string &mystring, FILE * fp, int nchar)
 {
-  nchar = nchar-1;
-  if (!fread(var, nchar, 1, fp))
-    perror("a binary read error occurred");
-  var[nchar] = '\0';
+  if (!fread(&mystring[0], nchar, 1, fp))
+    Rcpp::warning("char: a binary read error occurred");
 }
 
 void test(std::string testme, FILE * file)
 {
-  const char *testMe = testme.c_str();
-  char *test = new char[1+testme.size()];
-  readstr(test,file, 1+testme.size());
-  if (strcmp(testMe,test)!=0)
+  std::string test(testme.size(), '\0');
+
+  readstring(test,file, test.size());
+  if (testme.compare(test)!=0)
   {
-    REprintf("When attempting to read %s:", testme.c_str());
-    throw std::range_error("Something went wrong!");
+    Rcpp::stop("When attempting to read %s: Something went wrong!", testme.c_str());
   }
-  delete[] test;
 }
 
 #endif
