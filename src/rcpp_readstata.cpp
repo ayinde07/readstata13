@@ -244,6 +244,7 @@ List stata(const char * filePath, const bool missing)
   {
     std::string byteorder(3, '\0');
     readstring(byteorder,file, byteorder.size());
+    byteorderC(0) = byteorder;
 
     fseek(file, 12, SEEK_CUR); // </byteorder>
     test("<K>", file);
@@ -314,16 +315,18 @@ List stata(const char * filePath, const bool missing)
   if (release==118)
     ndlabel = readbin(ndlabel, file, swapit);
   else if(release==117)
-    ndlabel = readbin((int8_t)ndlabel, file, swapit);
-
+    ndlabel = readbin((uint8_t)ndlabel, file, swapit);
 
   CharacterVector datalabelCV(1);
 
   std::string datalabel(ndlabel, '\0');
 
-  readstring(datalabel, file, datalabel.size());
-  datalabelCV(0) = datalabel;
+  if (ndlabel > 0)
+    readstring(datalabel, file, datalabel.size());
+  else
+    datalabel = "";
 
+  datalabelCV(0) = datalabel;
 
   if(release>=117) {
     fseek(file, 8, SEEK_CUR); //</label>
@@ -1098,7 +1101,7 @@ List stata(const char * filePath, const bool missing)
   df.attr("version") = versionIV;
   df.attr("label.table") = labelList;
   df.attr("expansion.fields") = ch;
-  if (release == 117)
+  if (release >= 117)
   {
     df.attr("strl") = strlstable;
     df.attr("byteorder") = byteorderC;
