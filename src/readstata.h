@@ -26,7 +26,7 @@ T readbin( T t , FILE * file, bool swapit)
     if (feof(file))
       return 0; // this is expected after reading the labeltable
   } else if (ferror(file)){
-    perror("A binary read error occurred.");
+    Rcpp::warning("num: a binary read error occurred.");
   }
   if (swapit==0)
     return(t);

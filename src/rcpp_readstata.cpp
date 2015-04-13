@@ -102,8 +102,6 @@ List stata(const char * filePath, const bool missing)
     versionIV(0) = release;
   }
 
-  printf("%d \n", release);
-
   /*
   * byteorder is a 4 byte character e.g. "LSF". MSF referes to big-memory data.
   */
@@ -648,7 +646,6 @@ List stata(const char * filePath, const bool missing)
 
     std::string chtag = "<ch>";
 
-    List ch = List();
     CharacterVector chs(3);
 
     std::string tago(4, '\0');
@@ -685,7 +682,6 @@ List stata(const char * filePath, const bool missing)
 
     fseek(file, 14, SEEK_CUR); //[</ch]aracteristics>
     test("<data>", file);
-
   }
 
 

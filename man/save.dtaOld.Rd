@@ -6,7 +6,8 @@
 \usage{
 save.dtaOld(data, file = "path", data.label = NULL, time.stamp = TRUE,
   convert.factors = FALSE, convert.dates = TRUE, tz = "GMT",
-  add.rownames = FALSE, compress = FALSE, version = 115)
+  add.rownames = FALSE, compress = FALSE, version = 115,
+  convert.underscore = FALSE)
 }
 \arguments{
 \item{data}{\emph{data.frame.} A data.frame Object.}
@@ -29,6 +30,8 @@ Stata expects strings to be encoded as Windows-1252, so all levels will be recod
 \item{compress}{\emph{logical.} If \code{TRUE}, the resulting dta-file will use all of Statas numeric-vartypes.}
 
 \item{version}{\emph{integer.} The Stata dta file version you like to write. Default 115 (Stata 12). Supported versions are 115, 114 and 113 coresponding to Stata 12, 10 and 8. You can add the correct format or may type Stata version and the correct format will be choosen.}
+
+\item{convert.underscore}{\emph{logica.} If \code{TRUE}, in variable names dots will be converted to underscores.}
 }
 \value{
 The function writes a dta-file to disk. The following features of the dta file format are supported:
