@@ -62,8 +62,8 @@ List stata(const char * filePath, const bool missing)
     rewind(file);
     release = readbin(release, file, 0);
 
-    if (fbit.compare(expfbit)!=0)
-      Rcpp::stop("First byte: Not a version 13/14 dta-file.");
+    if (release<102 || release>115)
+      Rcpp::stop("First byte: Not a dta-file we can read.");
   }
 
   std::string version(3, '\0');
@@ -97,8 +97,9 @@ List stata(const char * filePath, const bool missing)
     fseek(file, 10, SEEK_CUR); // </release>
     test("<byteorder>", file);
   } else {
-    if (release<102 | release>115)
+    if (release<102 || release>115)
       Rcpp::stop("File appears to be of unsupported Stata format.");
+
     versionIV(0) = release;
   }
 
@@ -369,6 +370,9 @@ List stata(const char * filePath, const bool missing)
   default:
     {
       readstring(timestamp, file, timestamp.size());
+      // FixMe: trailing zero?
+      uint8_t zero = 0;
+      zero = readbin(zero, file, swapit);
       break;
     }
   }
@@ -906,18 +910,35 @@ List stata(const char * filePath, const bool missing)
 
   // FixMe: the while statement differs and the final check
 
-  if (release<117)
-  {
 
-    int32_t nlen = 0, labn = 0, txtlen = 0, noff = 0, val = 0;
+  int32_t nlen = 0, labn = 0, txtlen = 0, noff = 0, val = 0;
+  std::string tag(5, '\0');
+  std::string lbltag = "<lbl>";
 
+  bool haslabel = false;
+
+  if (release < 117) {
     // length of value_label_table
     nlen = readbin(nlen, file, swapit);
 
-    while(!feof(file)||ferror(file))
-    {
-    // name of this label set
+    if (!(feof(file) || ferror(file)))
+      haslabel = true;
+  } else {
+    readstring(tag, file, tag.size());
 
+    if (lbltag.compare(tag)==0)
+      haslabel = true;
+  }
+
+  while(haslabel)
+  {
+
+    if (release >= 117) {
+      // length of value_label_table
+      nlen = readbin(nlen, file, swapit);
+    }
+
+    // name of this label set
     std::string nlabname(lbllen, '\0');
 
     readstring(nlabname, file, nlabname.size());
@@ -986,94 +1007,18 @@ List stata(const char * filePath, const bool missing)
     // add this set to output list
     labelList.push_front( code, labset);
 
-    // EOF reached?
-    nlen = readbin(nlen, file, swapit);
-  } else {
-    std::string tag(5, '\0');
-    readstring(tag, file, tag.size());
-
-    std::string lbltag = "<lbl>";
-
-    while(lbltag.compare(tag)==0)
-    {
-      int32_t nlen = 0, labn = 0, txtlen = 0, noff = 0, val = 0;
-
+    if (release < 117) {
       // length of value_label_table
       nlen = readbin(nlen, file, swapit);
 
-      // name of this label set
-
-      std::string nlabname(lbllen, '\0');
-
-      readstring(nlabname, file, nlabname.size());
-
-      //padding
-      fseek(file, 3, SEEK_CUR);
-
-      // value_label_table for actual label set
-      labn = readbin(labn, file, swapit);
-      txtlen = readbin(txtlen, file, swapit);
-
-      // offset for each label
-      // off0 : label 0 starts at off0
-      // off1 : label 1 starts at off1 ...
-      IntegerVector off(labn);
-      for (int i=0; i < labn; ++i) {
-        noff = readbin(noff, file, swapit);
-        off[i] = noff;
-      }
-
-      // needed for match
-      IntegerVector laborder = clone(off);
-      //laborder.erase(labn+1);
-      IntegerVector labordersort = clone(off);
-      //labordersort.erase(labn+1);
-      std::sort(labordersort.begin(), labordersort.end());
-
-      // needs txtlen for loop
-      off.push_back(txtlen);
-
-      // sort offsets so we can read labels sequentially
-      std::sort(off.begin(), off.end());
-
-      // create an index to sort lables along the code values
-      // this is done while factor creation
-      IntegerVector indx(labn);
-      indx = match(laborder,labordersort);
-
-      // code for each label
-      IntegerVector code(labn);
-      for (int i=0; i < labn; ++i) {
-        val = readbin(val, file, swapit);
-        code[i] = val;
-      }
-
-      // label text
-      CharacterVector label(labn);
-      for (int i=0; i < labn; ++i) {
-        int lablen = off[i+1]-off[i];
-
-        std::string lab (lablen, '\0');
-
-        readstring(lab, file, lablen);
-        label[i] = lab;
-      }
-
-      // sort labels according to indx
-      CharacterVector labelo(labn);
-      for (int i=0; i < labn; ++i) {
-        labelo[i] = label[indx[i]-1];
-      }
-      // create table for actual label set
-      string const labset = nlabname;
-      code.attr("names") = labelo;
-
-      // add this set to output list
-      labelList.push_front( code, labset);
-
+      if (feof(file) || ferror(file))
+        break;
+    } else {
       fseek(file, 6, SEEK_CUR); //</lbl>
-
       readstring(tag, file, tag.size());
+
+      if (lbltag.compare(tag)!=0)
+        break;
     }
   }
 
