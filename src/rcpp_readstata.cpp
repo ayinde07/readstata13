@@ -297,7 +297,7 @@ List stata(const char * filePath, const bool missing)
 
   default:
     n = readbin((uint32_t)n, file, swapit);
-    break;
+  break;
   }
 
   if(release>=117) {
