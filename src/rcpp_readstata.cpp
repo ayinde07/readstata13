@@ -914,6 +914,8 @@ List stata(const char * filePath, const bool missing)
     // length of value_label_table
     nlen = readbin(nlen, file, swapit);
 
+    while(!feof(file)||ferror(file))
+    {
     // name of this label set
 
     std::string nlabname(lbllen, '\0');
