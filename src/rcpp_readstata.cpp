@@ -137,14 +137,14 @@ List stata(const char * filePath, const bool missing)
     nvarLabelslen = 32;
     break;
   case 105:
-    ndlabel = 31;
+    ndlabel = 32;
     nvarnameslen = 9;
-    nformatslen = 7;
+    nformatslen = 12;
     nvalLabelslen = 9;
     nvarLabelslen = 32;
     break;
   case 106:
-    ndlabel = 31;
+    ndlabel = 32;
     nvarnameslen = 9;
     nformatslen = 12;
     nvalLabelslen = 9;
@@ -344,9 +344,11 @@ List stata(const char * filePath, const bool missing)
   case 102:
   case 103:
   case 104:
+  {
     timestamp[0] = '\0';
     zero = readbin(zero, file, swapit);
     break;
+  }
 
   case 117:
   case 118:
