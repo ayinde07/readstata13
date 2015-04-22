@@ -333,7 +333,7 @@ List stata(const char * filePath, const bool missing)
   }
 
   CharacterVector timestampCV(1);
-  std::string timestamp(17, '\0');
+  std::string timestamp(18, '\0');
 
   // FixMe: trailing zero?
   uint8_t zero = 0;
@@ -364,7 +364,7 @@ List stata(const char * filePath, const bool missing)
 
       if (ntimestamp == 17) // ntimestap is 0 or 17
       {
-        readstring(timestamp, file, timestamp.size());
+        readstring(timestamp, file, ntimestamp);
       } else {
         timestamp = "";
       }
@@ -374,7 +374,6 @@ List stata(const char * filePath, const bool missing)
   default:
     {
       readstring(timestamp, file, timestamp.size());
-      zero = readbin(zero, file, swapit);
       break;
     }
   }
