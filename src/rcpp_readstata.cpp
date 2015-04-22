@@ -116,7 +116,7 @@ List stata(const char * filePath, const bool missing)
   switch(release)
   {
   case 102:
-    ndlabel = 30;
+    ndlabel = 29;
     nvarnameslen = 9;
     nformatslen = 7;
     nvalLabelslen = 9;
