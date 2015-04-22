@@ -146,7 +146,7 @@ int stataWriteOld(const char * filePath, Rcpp::DataFrame dat)
     {
       if (timestamp.size()>18)
       {
-        Rcpp::warning("Timestamp to long. Droping.");
+        Rcpp::warning("Timestamp to long. Dropping.");
         timestamp = "";
       }
       dta.write(timestamp.c_str(),timestamp.size());
